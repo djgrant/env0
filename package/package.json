@@ -2,7 +2,7 @@
   "type": "module",
   "name": "env0",
   "author": "Daniel Grant",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Load environment variables from 1Password",
   "license": "MIT",
   "main": "dist/index.js",
