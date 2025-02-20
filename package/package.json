@@ -2,12 +2,16 @@
   "type": "module",
   "name": "env0",
   "author": "Daniel Grant",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Load environment variables from 1Password",
   "license": "MIT",
   "main": "dist/index.js",
   "bin": {
     "env0": "./dist/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/djgrant/env0.git"
   },
   "scripts": {
     "build": "bun build src/cli.ts --outfile dist/cli.js --target node",
