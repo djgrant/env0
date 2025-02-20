@@ -13,8 +13,8 @@
     "build": "bun build src/cli.ts --outfile dist/cli.js --target node",
     "test": "bun test",
     "prepare": "npm run build",
-    "prepublishOnly": "cp ../README.md ./README.md && npm run build",
-    "postpublish": "rm ./README.md"
+    "prepublishOnly": "cp ../README.md ./README.md && cp -r ../.github ./",
+    "postpublish": "rm ./README.md && rm -rf ./.github"
   },
   "keywords": [
     "1password",
