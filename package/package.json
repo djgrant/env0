@@ -1,0 +1,30 @@
+{
+  "type": "module",
+  "name": "env0",
+  "author": "Daniel Grant",
+  "version": "0.1.0",
+  "description": "Load environment variables from 1Password",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "bin": {
+    "env0": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "bun build src/cli.ts --outfile dist/cli.js --target node",
+    "test": "bun test",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "1password",
+    "env",
+    "environment",
+    "secrets"
+  ],
+  "dependencies": {
+    "commander": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}

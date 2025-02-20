@@ -1,0 +1,7 @@
+{
+  "name": "env0-monorepo",
+  "workspaces": [
+    "package",
+    "example"
+  ]
+}

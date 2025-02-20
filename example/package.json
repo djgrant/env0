@@ -1,0 +1,12 @@
+{
+  "name": "env0-example",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "example": "env0 --vault dev-test node index.js",
+    "example:eval": "eval $(env0 -P -V dev-test) && node index.js"
+  },
+  "dependencies": {
+    "env0": "workspace:*"
+  }
+}
