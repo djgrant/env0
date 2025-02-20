@@ -21,7 +21,9 @@ npm install env0
 
 ## Usage
 
-#### 1. Create a `.env0` file in your project root with the environment variable names that should be loaded from 1Password:
+#### 1. Create a `.env0` file
+
+In your project root, add a .env0 file (this can be commited in version control) with the environment variable names that should be loaded from 1Password:
 
 ```plaintext
 TEST_ENV_VAR
@@ -29,21 +31,25 @@ DB_URL
 # IGNORED
 ```
 
-#### 2. Create a 1Password vault and add the environment variables to it:
+#### 2. Create secrets in 1Password
+
+Create a 1Password vault and add the environment variables to it:
 
 <img src="./.github/assets/create-1password-secret.png" width="400" alt="1Password Vault">
 
-#### 3. Use the CLI to run your commands with the loaded environment variables:
+#### 3. Run commands with env0
+
+Use env0 to load environment variables into a sub process that runs the specified command.
 
 ```bash
 # Basic usage
 env0 --vault "your-vault-name" your-command
 
-# Print environment variables for shell export
-env0 --vault "your-vault-name" --print
-
 # Use a custom keys file
 env0 --vault "your-vault-name" --keys "./env0.custom" your-command
+
+# Alternatively, print environment variables for shell export
+env0 --vault "your-vault-name" --print
 ```
 
 ## CLI Options
