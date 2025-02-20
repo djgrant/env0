@@ -12,7 +12,9 @@
   "scripts": {
     "build": "bun build src/cli.ts --outfile dist/cli.js --target node",
     "test": "bun test",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "prepublishOnly": "cp ../README.md ./README.md && npm run build",
+    "postpublish": "rm ./README.md"
   },
   "keywords": [
     "1password",
