@@ -35,7 +35,7 @@ DB_URL
 
 Create a 1Password vault and add the environment variables to it:
 
-<img src="./.github/assets/create-1password-secret.png" width="400" alt="1Password Vault">
+![1Password Vault](./.github/assets/create-1password-secret.png)
 
 #### 3. Run commands with env0
 
