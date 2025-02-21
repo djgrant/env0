@@ -3,5 +3,9 @@
   "workspaces": [
     "package",
     "example"
-  ]
+  ],
+  "scripts": {
+    "build": "bun --filter env0 build",
+    "test": "bun test"
+  }
 }
