@@ -4,7 +4,9 @@
   "main": "index.js",
   "scripts": {
     "example": "env0 --vault dev-test node index.js",
-    "example:eval": "eval $(env0 -P -V dev-test) && node index.js"
+    "example:eval": "eval $(env0 -P -V dev-test) && node index.js",
+    "example:inline": "env0 -V dev-test -K TEST_ENV_VAR -K TEST_ENV_VAR_2 node index.js",
+    "example:inline:file": "env0 -V dev-test -F .env0 -K TEST_ENV_VAR_3 node index.js"
   },
   "dependencies": {
     "env0": "workspace:*"

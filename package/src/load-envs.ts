@@ -28,11 +28,21 @@ export class EnvLoader {
     }
   }
 
-  async loadEnvs() {
-    const keys = this.readEnvKeys();
+  async loadEnvs(items: string[], readConfig: boolean = true) {
+    const keys: string[] = [];
     const envs: Record<string, string> = {};
 
-    for (const key of keys) {
+    if (readConfig) {
+      keys.push(...this.readEnvKeys());
+    }
+
+    if (items && items.length > 0) {
+      keys.push(...items);
+    }
+
+    const uniqueKeys = [...new Set(keys)];
+
+    for (const key of uniqueKeys) {
       const item = this.vault.getItem(key);
 
       if (!item) {
