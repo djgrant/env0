@@ -1,32 +1,29 @@
 import { $ } from "bun";
 import { expect, test, beforeAll, afterAll } from "bun:test";
 import fs from "fs/promises";
-import { op } from "./op-test-utils";
+import { OnePassword } from "./op-test-utils";
+
+const op = new OnePassword();
 
 const testVaultName = "env0-test";
-let testVaultId: string;
+const testVault = await op.createVault(testVaultName);
 
 beforeAll(async () => {
-  op.check();
+  op.checkCli();
 
-  const vault = await op.createVault(testVaultName);
-  testVaultId = vault.id;
-
-  await op.createItem({
-    vaultId: testVaultId,
+  await testVault.createItem({
     key: "TEST_SECRET",
     value: "test-value",
   });
 
-  await op.createItem({
-    vaultId: testVaultId,
+  await testVault.createItem({
     key: "ANOTHER_TEST_SECRET",
     value: "another-test-value",
   });
 });
 
 afterAll(async () => {
-  await op.deleteVault(testVaultId);
+  await testVault.remove();
 });
 
 afterEach(async () => {
