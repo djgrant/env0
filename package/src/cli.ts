@@ -43,9 +43,10 @@ program
       envs = await loader.loadEnvs(keys, shouldLoadFile);
 
       if (print) {
-        Object.entries(envs).forEach(([key, value]) => {
-          console.log(`export ${key}="${value}"`);
-        });
+        const output = Object.entries(envs)
+          .map(([key, value]) => `export ${key}="${value}"`)
+          .join("\n");
+        console.log(output);
         process.exit(0);
       }
 
