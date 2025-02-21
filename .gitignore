@@ -3,6 +3,8 @@ dist
 
 package/README.md
 package/.github
+test/.env0
+
 # Logs
 
 logs
