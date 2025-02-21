@@ -1,6 +1,6 @@
 # env0
 
-Load environment variables directly from 1Password and never use .env files again.
+Load environment variables directly from 1Password and never store secrets in .env files again.
 
 ## Features
 
