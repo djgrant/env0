@@ -1,6 +1,5 @@
 import { $ } from "bun";
-import { expect, test, beforeAll, afterAll } from "bun:test";
-import fs from "fs/promises";
+import { expect, test, beforeAll, afterAll, afterEach } from "bun:test";
 import { OnePassword } from "./op-test-utils";
 
 const op = new OnePassword();
@@ -27,39 +26,40 @@ afterAll(async () => {
 });
 
 afterEach(async () => {
-  await fs.unlink(".env0");
+  const env0File = Bun.file(".env0");
+  if (await env0File.exists()) await env0File.delete();
 });
 
 test("executes command with loaded environment variables", async () => {
-  fs.writeFile(".env0", "MY_TEST_SECRET");
-  const command = `bun -e 'console.log(process.env.MY_TEST_SECRET)'`;
+  await Bun.file(".env0").write("TEST_SECRET");
+  const command = `bun -e 'console.log(process.env.TEST_SECRET)'`;
   const output = await $`bunx env0 -V ${testVaultName} ${command}`.text();
   expect(output.trim()).toEndWith("test-value");
 });
 
 test("loads environment variables from .env0 file", async () => {
-  fs.writeFile(".env0", "MY_TEST_SECRET");
+  await Bun.file(".env0").write("TEST_SECRET");
   const output = await $`bunx env0 -V ${testVaultName} --print`.text();
-  expect(output).toBe('export MY_TEST_SECRET="test-value"\n');
+  expect(output).toBe('export TEST_SECRET="test-value"\n');
 });
 
 test("loads inline keys", async () => {
   const output =
-    await $`bunx env0 -V ${testVaultName} MY_TEST_SECRET --print`.text();
-  expect(output).toBe('export MY_TEST_SECRET="test-value"\n');
+    await $`bunx env0 -V ${testVaultName} -K TEST_SECRET --print`.text();
+  expect(output).toBe('export TEST_SECRET="test-value"\n');
 });
 
 test("combines file and inline keys", async () => {
-  fs.writeFile(".env0", "MY_TEST_SECRET");
+  await Bun.file(".env0").write("TEST_SECRET");
   const output =
-    await $`bunx env0 -V ${testVaultName} ANOTHER_SECRET --print`.text();
+    await $`bunx env0 -V ${testVaultName} -F .env0 -K ANOTHER_TEST_SECRET --print`.text();
   expect(output).toBe(
-    'export MY_TEST_SECRET="test-value"\nexport ANOTHER_SECRET="another-value"\n'
+    'export TEST_SECRET="test-value"\nexport ANOTHER_TEST_SECRET="another-test-value"\n'
   );
 });
 
 test("ignores commented lines in .env0 file", async () => {
-  fs.writeFile(".env0", "MY_TEST_SECRET\n# IGNORED_SECRET");
+  await Bun.file(".env0").write("TEST_SECRET\n# IGNORED_SECRET");
   const output = await $`bunx env0 -V ${testVaultName} --print`.text();
-  expect(output).toBe('export MY_TEST_SECRET="test-value"\n');
+  expect(output).toBe('export TEST_SECRET="test-value"\n');
 });

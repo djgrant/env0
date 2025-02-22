@@ -3,7 +3,9 @@ dist
 
 package/README.md
 package/.github
-test/.env0
+
+# test file – not normally ignored
+.env0
 
 # Logs
 
