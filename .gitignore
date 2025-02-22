@@ -3,6 +3,10 @@ dist
 
 package/README.md
 package/.github
+
+# test file – not normally ignored
+.env0
+
 # Logs
 
 logs
