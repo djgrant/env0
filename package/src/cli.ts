@@ -35,6 +35,11 @@ program
       process.exit(1);
     }
 
+    if (!source && !entries.length) {
+      console.error("[env0] Error: --source or --entry is required");
+      process.exit(1);
+    }
+
     let shouldLoadFile = true;
     if (entries.length > 0) {
       shouldLoadFile = process.argv.some(
@@ -44,22 +49,35 @@ program
 
     let envs: Record<string, string> = {};
 
-    try {
-      if (!source) {
-        console.error(
-          "[env0] Error: --source is required in format platform:vault"
-        );
+    if (source) {
+      const sourceParts = source.split(":");
+
+      if (sourceParts.length !== 2) {
+        console.error("[env0]: Error: source must be in format platform:vault");
         process.exit(1);
       }
 
-      const [platform, vault] = source.split(":");
-      if (platform !== "op" || !vault) {
-        console.error("[env0] Error: --source must be in format op:vault-name");
+      const [platform, vault] = sourceParts;
+
+      if (platform !== "op") {
+        console.error("[env0]: Error: source platform must be one of: [op]");
+        process.exit(1);
+      }
+
+      if (!vault) {
+        console.error("[env0]: Error: source vault is required");
         process.exit(1);
       }
 
       const loader = new EnvLoader(vault, file);
-      envs = await loader.loadEnvs(entries, shouldLoadFile);
+
+      try {
+        envs = await loader.loadEnvs(entries, shouldLoadFile);
+      } catch (error: any) {
+        console.error("[env0] Failed to load envs");
+        console.error(error.message);
+        process.exit(1);
+      }
 
       if (print) {
         const output = Object.entries(envs)
@@ -71,10 +89,6 @@ program
       }
 
       console.log("[env0] Envs loaded from 1Password");
-    } catch (error: any) {
-      console.error("[env0] Failed to load envs");
-      console.error(error.message);
-      process.exit(1);
     }
 
     const childProcess = shell
