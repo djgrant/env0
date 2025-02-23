@@ -48,10 +48,10 @@ Use env0 to load environment variables into a sub process that runs the specifie
 
 ```bash
 # Basic usage
-env0 --source op:your-vault-name your-command
+env0 --source op:your-vault-name -- your-command
 
 # Use a custom env0 file
-env0 --source op:your-vault-name --file "./env0.custom" your-command
+env0 --source op:your-vault-name --file "./env0.custom" -- your-command
 
 # Alternatively, print environment variables for shell export
 env0 --source op:your-vault-name --print
@@ -82,17 +82,35 @@ env0 --source op:your-vault-name --print
 ## Examples
 
 ```bash
-# Run a Node.js application with environment variables from 1Password
-env0 --source op:dev node app.js
+
+
+
+
+
+# Run a command with environment variables from 1Password dev vault
+env0 --source op:dev -- node app.js
+
+# Run a command inside a shell (single quotes for shell interpolation)
+env0 -s op:dev -e DB_URL -sh 'echo $DB_URL'
+
+
+
+
+
+
+
+
 
 # Use specific environment variables without a env0 file
-env0 --source op:dev --entry DB_URL --entry API_KEY node app.js
+env0 --source op:dev --entry DB_URL --entry API_KEY -- node app.js
 
 # Use literal and reference assignments inline
-STAGE="dev" env0 -s op:dev -e DB_PASS=PROD_DB_PASS node app.js
+STAGE="dev" env0 -s op:dev -e DB_PASS=PROD_DB_PASS -- node app.js
 
 # Combine env0 file with additional entries
-env0 -s op:dev -f .env0 -e EXTRA_VAR1 -e EXTRA_VAR2 node app.js
+env0 -s op:dev -f .env0 -e EXTRA_VAR1 -e EXTRA_VAR2 -- node app.js
+
+
 
 # Export variables to your shell and run a command
 eval $(env0 -s op:dev -p) && node app.js

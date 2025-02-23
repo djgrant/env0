@@ -21,13 +21,16 @@ program
   .option("-f, --file <path>", "Path to keys file", ".env0")
   .option("-e, --entry [entry]", "Specify a env key or assignment", collect, [])
   .option("-p, --print", "Print environment variables for shell export")
+  .option("-sh, --shell", "Run the command in a shell")
   .version(packageJson.version)
-  .allowExcessArguments(true)
-  .action(async (options, command) => {
-    const args = command.args;
-    const { print, source, file, entry: entries } = options;
+  .argument(
+    "[command...]",
+    "Command to execute with loaded environment variables"
+  )
+  .action(async (command, options) => {
+    const { print, source, file, entry: entries, shell } = options;
 
-    if (!print && (!command || args.length === 0)) {
+    if (!print && (!command || command.length === 0)) {
       console.error("[env0] Error: Command is required unless using --print");
       process.exit(1);
     }
@@ -42,7 +45,6 @@ program
     let envs: Record<string, string> = {};
 
     try {
-      // Parse source into platform and vault
       if (!source) {
         console.error(
           "[env0] Error: --source is required in format platform:vault"
@@ -75,15 +77,23 @@ program
       process.exit(1);
     }
 
-    const childProcess = spawn(args[0], args.slice(1), {
-      stdio: "inherit",
-      shell: true,
-      env: { ...process.env, ...envs },
-    });
+    const childProcess = shell
+      ? spawn(command.join(" "), [], {
+          stdio: "inherit",
+          shell: true,
+          env: { ...process.env, ...envs },
+        })
+      : spawn(command[0], command.slice(1), {
+          stdio: "inherit",
+          shell: false,
+          env: { ...process.env, ...envs },
+        });
 
     childProcess.on("exit", (code) => {
       process.exit(code || 0);
     });
   });
 
+// Enable -- for command separation
+program.enablePositionalOptions();
 program.parse();
