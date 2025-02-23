@@ -16,13 +16,13 @@ program
   .description("Load environment variables from 1Password")
   .option("-V, --vault <name>", "1Password vault name")
   .option("-F, --file <path>", "Path to keys file", ".env0")
-  .option("-K, --key [key]", "Specify a key", collect, [])
+  .option("-e, --entry [entry]", "Specify a env key or assignment", collect, [])
   .option("-P, --print", "Print environment variables for shell export")
   .version(packageJson.version)
   .allowExcessArguments(true)
   .action(async (options, command) => {
     const args = command.args;
-    const { print, vault, file, key: keys } = options;
+    const { print, vault, file, entry: entries } = options;
 
     if (!print && (!command || args.length === 0)) {
       console.error("[env0] Error: Command is required unless using --print");
@@ -30,7 +30,7 @@ program
     }
 
     let shouldLoadFile = true;
-    if (keys.length > 0) {
+    if (entries.length > 0) {
       shouldLoadFile = process.argv.some(
         (arg) => arg === "-F" || arg === "--file"
       );
@@ -40,12 +40,13 @@ program
 
     try {
       const loader = new EnvLoader(vault, file);
-      envs = await loader.loadEnvs(keys, shouldLoadFile);
+      envs = await loader.loadEnvs(entries, shouldLoadFile);
 
       if (print) {
         const output = Object.entries(envs)
           .map(([key, value]) => `export ${key}="${value}"`)
           .join("\n");
+
         console.log(output);
         process.exit(0);
       }
