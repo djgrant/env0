@@ -31,16 +31,19 @@ program
     const { print, source, file, entry: entries, shell } = options;
 
     if (!print && (!command || command.length === 0)) {
-      console.error("[env0] Error: Command is required unless using --print");
+      console.error(
+        "[env0] Error: a command, -sh/--shell or -p/--print is required"
+      );
       process.exit(1);
     }
 
-    if (!source && !entries.length) {
-      console.error("[env0] Error: --source or --entry is required");
+    if (!source) {
+      console.error("[env0] Error: --source or -s is required");
       process.exit(1);
     }
 
     let shouldLoadFile = true;
+
     if (entries.length > 0) {
       shouldLoadFile = process.argv.some(
         (arg) => arg === "-f" || arg === "--file"
@@ -49,47 +52,45 @@ program
 
     let envs: Record<string, string> = {};
 
-    if (source) {
-      const sourceParts = source.split(":");
+    const sourceParts = source.split(":");
 
-      if (sourceParts.length !== 2) {
-        console.error("[env0]: Error: source must be in format platform:vault");
-        process.exit(1);
-      }
-
-      const [platform, vault] = sourceParts;
-
-      if (platform !== "op") {
-        console.error("[env0]: Error: source platform must be one of: [op]");
-        process.exit(1);
-      }
-
-      if (!vault) {
-        console.error("[env0]: Error: source vault is required");
-        process.exit(1);
-      }
-
-      const loader = new EnvLoader(vault, file);
-
-      try {
-        envs = await loader.loadEnvs(entries, shouldLoadFile);
-      } catch (error: any) {
-        console.error("[env0] Failed to load envs");
-        console.error(error.message);
-        process.exit(1);
-      }
-
-      if (print) {
-        const output = Object.entries(envs)
-          .map(([key, value]) => `export ${key}="${value}"`)
-          .join("\n");
-
-        console.log(output);
-        process.exit(0);
-      }
-
-      console.log("[env0] Envs loaded from 1Password");
+    if (sourceParts.length !== 2) {
+      console.error("[env0]: Error: source must be in format platform:vault");
+      process.exit(1);
     }
+
+    const [platform, vault] = sourceParts;
+
+    if (platform !== "op") {
+      console.error("[env0]: Error: source platform must be one of: [op]");
+      process.exit(1);
+    }
+
+    if (!vault) {
+      console.error("[env0]: Error: source vault is required");
+      process.exit(1);
+    }
+
+    const loader = new EnvLoader(vault, file);
+
+    try {
+      envs = await loader.loadEnvs(entries, shouldLoadFile);
+    } catch (error: any) {
+      console.error("[env0] Failed to load envs");
+      console.error(error.message);
+      process.exit(1);
+    }
+
+    if (print) {
+      const output = Object.entries(envs)
+        .map(([key, value]) => `export ${key}="${value}"`)
+        .join("\n");
+
+      console.log(output);
+      process.exit(0);
+    }
+
+    console.log("[env0] Envs loaded from 1Password");
 
     const childProcess = shell
       ? spawn(command.join(" "), [], {
