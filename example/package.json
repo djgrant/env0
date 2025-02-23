@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "example": "env0 --vault dev-test node index.js",
-    "example:eval": "eval $(env0 -P -V dev-test) && node index.js",
-    "example:inline": "env0 -V dev-test -e SHORTHAND_ENV_VAR -e RENAMED_ENV_VAR=SOURCE_ENV_VAR node index.js",
-    "example:inline:file": "env0 -V dev-test -F .env0 -e RENAMED_ENV_VAR=SOURCE_ENV_VAR node index.js"
+    "example": "env0 --source op:dev-test node index.js",
+    "example:eval": "eval $(env0 -p -s op:dev-test) && node index.js",
+    "example:inline": "env0 -s op:dev-test -e SHORTHAND_ENV_VAR -e RENAMED_ENV_VAR=SOURCE_ENV_VAR node index.js",
+    "example:inline:file": "env0 -s op:dev-test -f .env0 -e RENAMED_ENV_VAR=SOURCE_ENV_VAR node index.js"
   },
   "dependencies": {
     "env0": "workspace:*"

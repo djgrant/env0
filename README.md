@@ -48,29 +48,29 @@ Use env0 to load environment variables into a sub process that runs the specifie
 
 ```bash
 # Basic usage
-env0 --vault "your-vault-name" your-command
+env0 --source op:your-vault-name your-command
 
 # Use a custom env0 file
-env0 --vault "your-vault-name" --file "./env0.custom" your-command
+env0 --source op:your-vault-name --file "./env0.custom" your-command
 
 # Alternatively, print environment variables for shell export
-env0 --vault "your-vault-name" --print
+env0 --source op:your-vault-name --print
 ```
 
 ## CLI Options
 
-- `-V, --vault <name>`: Specify the 1Password vault name (required)
-- `-F, --file <path>`: Path to an env0 file (defaults to `.env0` unless `-e` is used)
+- `-s, --source <platform:vault>`: Specify the source in format platform:vault (e.g. op:secrets-staging)
+- `-f, --file <path>`: Path to an env0 file (defaults to `.env0` unless `-e` is used)
 - `-e, --entry <entries...>`: Specify environment variable entries inline
-- `-P, --print`: Print environment variables for shell export
+- `-p, --print`: Print environment variables for shell export
 - Any additional arguments are passed to the command being executed
 
 ## How It Works
 
 1. The CLI loads environment variables using either:
-   - The env0 file specified by `-F, --file`, or
+   - The env0 file specified by `-f, --file`, or
    - Inline entries specified via `-e, --entry`, or
-   - Both sources when both `-F` and `-e` are both explicitly specified
+   - Both sources when both `-f` and `-e` are both explicitly specified
 2. For each entry, it processes the environment variable based on its type:
    - Shorthand (e.g., `VAR`): Fetches the corresponding item from the specified 1Password vault
    - Literal (e.g., `VAR="value"`): Uses the literal string value provided
@@ -83,19 +83,19 @@ env0 --vault "your-vault-name" --print
 
 ```bash
 # Run a Node.js application with environment variables from 1Password
-env0 --vault "dev" node app.js
+env0 --source op:dev node app.js
 
 # Use specific environment variables without a env0 file
-env0 --vault "dev" --entry DB_URL --entry API_KEY node app.js
+env0 --source op:dev --entry DB_URL --entry API_KEY node app.js
 
 # Use literal and reference assignments inline
-env0 --vault "dev" --entry 'STAGE="development"' --entry 'DB_PASS=PROD_DB_PASS' node app.js
+STAGE="dev" env0 -s op:dev -e DB_PASS=PROD_DB_PASS node app.js
 
 # Combine env0 file with additional entries
-env0 --vault "dev" --file .env0 --entry EXTRA_VAR1 --entry EXTRA_VAR2 node app.js
+env0 -s op:dev -f .env0 -e EXTRA_VAR1 -e EXTRA_VAR2 node app.js
 
 # Export variables to your shell and run a command
-eval $(env0 --vault "dev" --print) && node app.js
+eval $(env0 -s op:dev -p) && node app.js
 ```
 
 ## License

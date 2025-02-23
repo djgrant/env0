@@ -14,15 +14,18 @@ function collect(value: string, previous: string[]) {
 program
   .name("env0")
   .description("Load environment variables from 1Password")
-  .option("-V, --vault <name>", "1Password vault name")
-  .option("-F, --file <path>", "Path to keys file", ".env0")
+  .option(
+    "-s, --source <platform:vault>",
+    "Source in format platform:vault (e.g. op:secrets-staging)"
+  )
+  .option("-f, --file <path>", "Path to keys file", ".env0")
   .option("-e, --entry [entry]", "Specify a env key or assignment", collect, [])
-  .option("-P, --print", "Print environment variables for shell export")
+  .option("-p, --print", "Print environment variables for shell export")
   .version(packageJson.version)
   .allowExcessArguments(true)
   .action(async (options, command) => {
     const args = command.args;
-    const { print, vault, file, entry: entries } = options;
+    const { print, source, file, entry: entries } = options;
 
     if (!print && (!command || args.length === 0)) {
       console.error("[env0] Error: Command is required unless using --print");
@@ -32,13 +35,27 @@ program
     let shouldLoadFile = true;
     if (entries.length > 0) {
       shouldLoadFile = process.argv.some(
-        (arg) => arg === "-F" || arg === "--file"
+        (arg) => arg === "-f" || arg === "--file"
       );
     }
 
     let envs: Record<string, string> = {};
 
     try {
+      // Parse source into platform and vault
+      if (!source) {
+        console.error(
+          "[env0] Error: --source is required in format platform:vault"
+        );
+        process.exit(1);
+      }
+
+      const [platform, vault] = source.split(":");
+      if (platform !== "op" || !vault) {
+        console.error("[env0] Error: --source must be in format op:vault-name");
+        process.exit(1);
+      }
+
       const loader = new EnvLoader(vault, file);
       envs = await loader.loadEnvs(entries, shouldLoadFile);
 
@@ -54,6 +71,7 @@ program
       console.log("[env0] Envs loaded from 1Password");
     } catch (error: any) {
       console.error("[env0] Failed to load envs");
+      console.error(error.message);
       process.exit(1);
     }
 
