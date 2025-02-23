@@ -1,3 +1,3 @@
-console.log("TEST_ENV_VAR:", process.env.TEST_ENV_VAR);
-console.log("TEST_ENV_VAR_2:", process.env.TEST_ENV_VAR_2);
-console.log("TEST_ENV_VAR_3:", process.env.TEST_ENV_VAR_3);
+console.log("SHORTHAND_ENV_VAR:", process.env.SHORTHAND_ENV_VAR);
+console.log("RENAMED_ENV_VAR:", process.env.RENAMED_ENV_VAR);
+console.log("LITERAL_ENV_VAR:", process.env.LITERAL_ENV_VAR);
