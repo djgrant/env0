@@ -6,6 +6,9 @@
   ],
   "scripts": {
     "build": "bun --filter env0 build",
-    "test": "bun test"
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.7"
   }
 }
