@@ -1,13 +1,21 @@
 import { readFileSync } from "fs";
 import { OnePasswordVault } from "./one-password";
 
+type ExpressionNode = {
+  key: string;
+  type: "shorthand" | "literal" | "reference";
+  value?: string;
+};
+
 export class EnvLoader {
   private vault: OnePasswordVault;
   private configPath: string;
+  private overrideConfigPath: string;
 
   constructor(vaultName: string, configPath: string = ".env0") {
     this.vault = new OnePasswordVault(vaultName);
     this.configPath = configPath;
+    this.overrideConfigPath = `${configPath}.local`;
   }
 
   private parseEnvExpression(line: string): {
@@ -43,52 +51,55 @@ export class EnvLoader {
     throw new Error(`Invalid environment variable expression: ${line}`);
   }
 
-  private readEnvKeys(): Array<{
-    key: string;
-    type: "shorthand" | "literal" | "reference";
-    value?: string;
-  }> {
+  private static readFileContents(
+    filePath: string,
+    required: boolean = true
+  ): string[] {
     try {
-      const content = readFileSync(this.configPath, "utf-8");
+      const content = readFileSync(filePath, "utf-8");
       return content
         .split("\n")
         .map((line) => line.trim())
-        .filter((line) => line && !line.startsWith("#"))
-        .map((line) => this.parseEnvExpression(line));
+        .filter((line) => line && !line.startsWith("#"));
     } catch (error) {
-      throw new Error(`Failed to read env0 file ${this.configPath}: ${error}`);
+      if (required && (error as { code?: string }).code === "ENOENT") {
+        throw new Error(`Failed to read file ${filePath}: ${error}`);
+      }
+      return [];
     }
   }
 
-  private maskSecret(value: string): void {
-    if (process.env["GITHUB_ACTIONS"]) {
-      console.log(`::add-mask::${value}`);
-    }
+  private readEnvFiles() {
+    const baseLines = EnvLoader.readFileContents(this.configPath);
+    const overrideLines = EnvLoader.readFileContents(
+      this.overrideConfigPath,
+      false
+    );
+
+    return [...baseLines, ...overrideLines];
   }
 
   async loadEnvs(items: string[], readConfig: boolean = true) {
-    const envExpressions: Array<{
-      key: string;
-      type: "shorthand" | "literal" | "reference";
-      value?: string;
-    }> = [];
-    const envs: Record<string, string> = {};
+    const expressionNodes: Record<string, ExpressionNode> = {};
 
     if (readConfig) {
-      envExpressions.push(...this.readEnvKeys());
+      const configExpressions = this.readEnvFiles();
+      for (const exp of configExpressions) {
+        const env = this.parseEnvExpression(exp);
+        expressionNodes[env.key] = env;
+      }
     }
 
     if (items && items.length > 0) {
-      envExpressions.push(
-        ...items.map((item) => this.parseEnvExpression(item))
-      );
+      for (const item of items) {
+        const env = this.parseEnvExpression(item);
+        expressionNodes[env.key] = env;
+      }
     }
 
-    const uniqueExpressions = [
-      ...new Set(envExpressions.map((e) => JSON.stringify(e))),
-    ].map((e) => JSON.parse(e));
+    const envs: Record<string, string> = {};
 
-    for (const expr of uniqueExpressions) {
+    for (const expr of Object.values(expressionNodes)) {
       if (expr.type === "literal") {
         envs[expr.key] = expr.value!;
         continue;
@@ -99,9 +110,6 @@ export class EnvLoader {
         if (!sourceItem) {
           throw new Error(`No item found for reference ${expr.value}`);
         }
-        if (sourceItem.type === "CONCEALED") {
-          this.maskSecret(sourceItem.value);
-        }
         envs[expr.key] = sourceItem.value;
         continue;
       }
@@ -110,9 +118,6 @@ export class EnvLoader {
       const item = this.vault.getItem(expr.key);
       if (!item) {
         throw new Error(`No item found for ${expr.key}`);
-      }
-      if (item.type === "CONCEALED") {
-        this.maskSecret(item.value);
       }
       envs[expr.key] = item.value;
     }

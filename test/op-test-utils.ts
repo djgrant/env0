@@ -1,9 +1,9 @@
-import { $ } from "bun";
+import { run } from "./sh-test-utils";
 
 export class OnePassword {
-  checkCli() {
+  async checkCli() {
     try {
-      $`op --version`;
+      await run("op --version");
       return true;
     } catch (error) {
       throw new Error("1Password CLI (op) is not installed or not in PATH");
@@ -11,7 +11,8 @@ export class OnePassword {
   }
 
   async createVault(vaultName: string) {
-    const vault = await $`op vault create ${vaultName} --format json`.json();
+    const vaultStr = await run(`op vault create ${vaultName} --format json`);
+    const vault = JSON.parse(vaultStr);
     return new OnePasswordVault(vault);
   }
 }
@@ -24,10 +25,16 @@ export class OnePasswordVault {
   }
 
   async createItem(opts: { key: string; value: string }) {
-    await $`op item create --vault ${this.id} --category 003 --title ${opts.key} password=${opts.value}`.quiet();
+    try {
+      await run(
+        `op item create --vault ${this.id} --category 003 --title ${opts.key} password=${opts.value}`
+      );
+    } catch (error) {
+      console.error(error.stderr.toString());
+    }
   }
 
   async remove() {
-    await $`op vault delete ${this.id}`;
+    await run(`op vault delete ${this.id}`);
   }
 }

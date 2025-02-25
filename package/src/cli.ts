@@ -90,8 +90,6 @@ program
       process.exit(0);
     }
 
-    console.log("[env0] Envs loaded from 1Password");
-
     const childProcess = shell
       ? spawn(command.join(" "), [], {
           stdio: "inherit",

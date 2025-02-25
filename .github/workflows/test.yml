@@ -2,7 +2,7 @@ name: Test
 
 on:
   pull_request:
-    branches: [main, master]
+    branches: [main]
 
 jobs:
   test:
@@ -10,6 +10,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@v1
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -22,5 +25,10 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Install env0 locally
+        run: bun install
+
       - name: Run tests
         run: bun run test
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONE_PASSWORD_TESTING_TOKEN }}
