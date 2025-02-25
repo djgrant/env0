@@ -7,7 +7,7 @@ const op = new OnePassword();
 const testVault = await op.createVault("env-zero-test-vault");
 
 const runEnv0 = async (args: string) => {
-  return run(`bunx env0 -s op:env-zero-test-vault ${args}`);
+  return run(`env0 -s op:env-zero-test-vault ${args}`);
 };
 
 const cleanUp = async () => {

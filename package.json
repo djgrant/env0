@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "vitest": "^3.0.7"
+    "vitest": "^3.0.7",
+    "env0": "workspace:*"
   }
 }
