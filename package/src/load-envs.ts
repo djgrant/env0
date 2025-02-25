@@ -79,12 +79,6 @@ export class EnvLoader {
     return [...baseLines, ...overrideLines];
   }
 
-  private maskSecret(value: string): void {
-    if (process.env["GITHUB_ACTIONS"]) {
-      console.log(`::add-mask::${value}`);
-    }
-  }
-
   async loadEnvs(items: string[], readConfig: boolean = true) {
     const expressionNodes: Record<string, ExpressionNode> = {};
 
@@ -116,9 +110,6 @@ export class EnvLoader {
         if (!sourceItem) {
           throw new Error(`No item found for reference ${expr.value}`);
         }
-        if (sourceItem.type === "CONCEALED") {
-          this.maskSecret(sourceItem.value);
-        }
         envs[expr.key] = sourceItem.value;
         continue;
       }
@@ -127,9 +118,6 @@ export class EnvLoader {
       const item = this.vault.getItem(expr.key);
       if (!item) {
         throw new Error(`No item found for ${expr.key}`);
-      }
-      if (item.type === "CONCEALED") {
-        this.maskSecret(item.value);
       }
       envs[expr.key] = item.value;
     }

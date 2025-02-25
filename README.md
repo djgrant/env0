@@ -6,7 +6,6 @@ Load environment variables directly from 1Password and never store secrets in .e
 
 - Load environment variables directly from 1Password vaults
 - Simple configuration using a `.env0` file to declare required envs
-- Mask secrets in logs when using GitHub Actions
 - Easy integration with any command or script
 
 ## Prerequisites
@@ -84,8 +83,7 @@ env0 --source op:your-vault-name --print
    - Literal (e.g., `VAR="value"`): Uses the literal string value provided
    - Reference (e.g., `VAR=SOURCE_VAR`): Fetches the value from another 1Password item
 4. Environment variables are loaded into the process
-5. If using GitHub Actions, any 1Password password fields are automatically masked in logs
-6. The specified command is executed with the loaded environment variables
+5. The specified command is executed with the loaded environment variables
 
 ## Examples
 
