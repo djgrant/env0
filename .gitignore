@@ -7,6 +7,9 @@ package/.github
 # test file – not normally ignored
 .env0
 
+# also test file - but this should be ignored!
+.env0.local
+
 # Logs
 
 logs

@@ -36,6 +36,13 @@ LITERAL_VAR="my static value"
 RENAMED_VAR=SOURCE_VAR
 ```
 
+You can also create a `.env0.local` file for local development overrides. This file should not be committed to version control:
+
+```plaintext
+# Override with a local value
+DB_URL="postgres://localhost:5432/my_local_db"
+```
+
 #### 2. Create secrets in 1Password
 
 Create a 1Password vault and add the environment variables to it:
@@ -71,35 +78,24 @@ env0 --source op:your-vault-name --print
    - The env0 file specified by `-f, --file`, or
    - Inline entries specified via `-e, --entry`, or
    - Both sources when both `-f` and `-e` are both explicitly specified
-2. For each entry, it processes the environment variable based on its type:
+2. If a `.env0.local` file exists in the same directory as the env0 file, it will be loaded and its values will override or extend the base configuration
+3. For each entry, it processes the environment variable based on its type:
    - Shorthand (e.g., `VAR`): Fetches the corresponding item from the specified 1Password vault
    - Literal (e.g., `VAR="value"`): Uses the literal string value provided
    - Reference (e.g., `VAR=SOURCE_VAR`): Fetches the value from another 1Password item
-3. Environment variables are loaded into the process
-4. If using GitHub Actions, any 1Password password fields are automatically masked in logs
-5. The specified command is executed with the loaded environment variables
+4. Environment variables are loaded into the process
+5. If using GitHub Actions, any 1Password password fields are automatically masked in logs
+6. The specified command is executed with the loaded environment variables
 
 ## Examples
 
 ```bash
-
-
-
-
 
 # Run a command with environment variables from 1Password dev vault
 env0 --source op:dev -- node app.js
 
 # Run a command inside a shell (single quotes for shell interpolation)
 env0 -s op:dev -e DB_URL -sh 'echo $DB_URL'
-
-
-
-
-
-
-
-
 
 # Use specific environment variables without a env0 file
 env0 --source op:dev --entry DB_URL --entry API_KEY -- node app.js
@@ -109,8 +105,6 @@ STAGE="dev" env0 -s op:dev -e DB_PASS=PROD_DB_PASS -- node app.js
 
 # Combine env0 file with additional entries
 env0 -s op:dev -f .env0 -e EXTRA_VAR1 -e EXTRA_VAR2 -- node app.js
-
-
 
 # Export variables to your shell and run a command
 eval $(env0 -s op:dev -p) && node app.js

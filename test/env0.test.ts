@@ -27,12 +27,33 @@ afterAll(async () => {
 afterEach(async () => {
   const env0File = Bun.file(".env0");
   if (await env0File.exists()) await env0File.delete();
+  const env0LocalFile = Bun.file(".env0.local");
+  if (await env0LocalFile.exists()) await env0LocalFile.delete();
 });
 
 test("loads environment variables from .env0 file", async () => {
   await Bun.file(".env0").write("TEST_SECRET");
   const output = await $`bunx env0 -s op:test-vault --print`.text();
   expect(output).toBe('export TEST_SECRET="test-value"\n');
+});
+
+test("overrides environment variables with .env0.local file", async () => {
+  await Bun.file(".env0").write(`TEST_SECRET
+ANOTHER_TEST_SECRET`);
+  await Bun.file(".env0.local").write('TEST_SECRET="local-override"');
+  const output = await $`bunx env0 -s op:test-vault --print`.text();
+  expect(output).toBe(
+    'export TEST_SECRET="local-override"\nexport ANOTHER_TEST_SECRET="another-test-value"\n'
+  );
+});
+
+test("adds new variables from .env0.local file", async () => {
+  await Bun.file(".env0").write("TEST_SECRET");
+  await Bun.file(".env0.local").write('LOCAL_VAR="local-only"');
+  const output = await $`bunx env0 -s op:test-vault --print`.text();
+  expect(output).toBe(
+    'export TEST_SECRET="test-value"\nexport LOCAL_VAR="local-only"\n'
+  );
 });
 
 test("loads inline keys", async () => {
