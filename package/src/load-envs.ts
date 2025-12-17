@@ -9,13 +9,11 @@ type ExpressionNode = {
 
 export class EnvLoader {
   private vault: OnePasswordVault;
-  private configPath: string;
-  private overrideConfigPath: string;
+  private configPaths: string[];
 
-  constructor(vaultName: string, configPath: string = ".env0") {
+  constructor(vaultName: string, configPaths: string[] = [".env0"]) {
     this.vault = new OnePasswordVault(vaultName);
-    this.configPath = configPath;
-    this.overrideConfigPath = `${configPath}.local`;
+    this.configPaths = configPaths;
   }
 
   private parseEnvExpression(line: string): {
@@ -70,13 +68,18 @@ export class EnvLoader {
   }
 
   private readEnvFiles() {
-    const baseLines = EnvLoader.readFileContents(this.configPath);
-    const overrideLines = EnvLoader.readFileContents(
-      this.overrideConfigPath,
-      false
-    );
+    const allLines: string[] = [];
 
-    return [...baseLines, ...overrideLines];
+    for (const configPath of this.configPaths) {
+      const baseLines = EnvLoader.readFileContents(configPath);
+      const overrideLines = EnvLoader.readFileContents(
+        `${configPath}.local`,
+        false
+      );
+      allLines.push(...baseLines, ...overrideLines);
+    }
+
+    return allLines;
   }
 
   async loadEnvs(items: string[], readConfig: boolean = true) {

@@ -18,7 +18,7 @@ program
     "-s, --source <platform:vault>",
     "Source in format platform:vault (e.g. op:secrets-staging)"
   )
-  .option("-f, --file <path>", "Path to keys file", ".env0")
+  .option("-f, --file <path>", "Path to keys file (can be specified multiple times)", collect, [])
   .option("-e, --entry [entry]", "Specify a env key or assignment", collect, [])
   .option("-p, --print", "Print environment variables for shell export")
   .option("-sh, --shell", "Run the command in a shell")
@@ -28,7 +28,7 @@ program
     "Command to execute with loaded environment variables"
   )
   .action(async (command, options) => {
-    const { print, source, file, entry: entries, shell } = options;
+    const { print, source, file: files, entry: entries, shell } = options;
 
     if (!print && (!command || command.length === 0)) {
       console.error(
@@ -42,13 +42,16 @@ program
       process.exit(1);
     }
 
-    let shouldLoadFile = true;
+    let shouldLoadFiles = true;
 
     if (entries.length > 0) {
-      shouldLoadFile = process.argv.some(
+      shouldLoadFiles = process.argv.some(
         (arg) => arg === "-f" || arg === "--file"
       );
     }
+
+    // Default to [".env0"] if no files specified and we should load files
+    const configFiles = files.length > 0 ? files : [".env0"];
 
     let envs: Record<string, string> = {};
 
@@ -71,10 +74,10 @@ program
       process.exit(1);
     }
 
-    const loader = new EnvLoader(vault, file);
+    const loader = new EnvLoader(vault, configFiles);
 
     try {
-      envs = await loader.loadEnvs(entries, shouldLoadFile);
+      envs = await loader.loadEnvs(entries, shouldLoadFiles);
     } catch (error: any) {
       console.error("[env0] Failed to load envs");
       console.error(error.message);

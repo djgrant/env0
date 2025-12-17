@@ -13,6 +13,17 @@ const runEnv0 = async (args: string) => {
 const cleanUp = async () => {
   await rm(".env0");
   await rm(".env0.local");
+  await rm(".env0.multi1");
+  await rm(".env0.multi2");
+  await rm(".env0.override1");
+  await rm(".env0.override2");
+  await rm(".env0.localtest1");
+  await rm(".env0.localtest1.local");
+  await rm(".env0.localtest2");
+  await rm(".env0.precedence1");
+  await rm(".env0.precedence1.local");
+  await rm(".env0.precedence2");
+  await rm(".env0.precedence2.local");
 };
 
 beforeAll(async () => {
@@ -35,7 +46,7 @@ afterAll(async () => {
 });
 
 afterEach(async () => {
-  cleanUp();
+  await cleanUp();
 });
 
 test("loads environment variables from .env0 file", async () => {
@@ -132,4 +143,39 @@ test("executes command in shell with loaded environment variables", async () => 
   await fs.writeFile(".env0", "TEST_SECRET");
   const output = await runEnv0("-sh 'echo $TEST_SECRET'");
   expect(output.trim()).toContain("test-value");
+});
+
+test("loads environment variables from multiple -f files", async () => {
+  await fs.writeFile(".env0.multi1", "TEST_SECRET");
+  await fs.writeFile(".env0.multi2", "ANOTHER_TEST_SECRET");
+  const output = await runEnv0("-f .env0.multi1 -f .env0.multi2 --print");
+  expect(output).toBe(
+    'export TEST_SECRET="test-value"\nexport ANOTHER_TEST_SECRET="another-test-value"'
+  );
+});
+
+test("later -f files override earlier -f files", async () => {
+  await fs.writeFile(".env0.override1", 'TEST_SECRET="base-value"');
+  await fs.writeFile(".env0.override2", 'TEST_SECRET="extra-value"');
+  const output = await runEnv0("-f .env0.override1 -f .env0.override2 --print");
+  expect(output).toBe('export TEST_SECRET="extra-value"');
+});
+
+test("each -f file supports its own .local override", async () => {
+  await fs.writeFile(".env0.localtest1", "TEST_SECRET");
+  await fs.writeFile(".env0.localtest1.local", 'TEST_SECRET="base-local-value"');
+  await fs.writeFile(".env0.localtest2", "ANOTHER_TEST_SECRET");
+  const output = await runEnv0("-f .env0.localtest1 -f .env0.localtest2 --print");
+  expect(output).toBe(
+    'export TEST_SECRET="base-local-value"\nexport ANOTHER_TEST_SECRET="another-test-value"'
+  );
+});
+
+test("later -f file's .local override takes precedence", async () => {
+  await fs.writeFile(".env0.precedence1", 'TEST_SECRET="base-value"');
+  await fs.writeFile(".env0.precedence1.local", 'TEST_SECRET="base-local-value"');
+  await fs.writeFile(".env0.precedence2", 'TEST_SECRET="extra-value"');
+  await fs.writeFile(".env0.precedence2.local", 'TEST_SECRET="extra-local-value"');
+  const output = await runEnv0("-f .env0.precedence1 -f .env0.precedence2 --print");
+  expect(output).toBe('export TEST_SECRET="extra-local-value"');
 });

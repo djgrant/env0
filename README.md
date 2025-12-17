@@ -59,6 +59,9 @@ env0 --source op:your-vault-name -- your-command
 # Use a custom env0 file
 env0 --source op:your-vault-name --file "./env0.custom" -- your-command
 
+# Use multiple env0 files (later files override earlier ones)
+env0 --source op:your-vault-name -f .env0.base -f .env0.staging -- your-command
+
 # Alternatively, print environment variables for shell export
 env0 --source op:your-vault-name --print
 ```
@@ -66,7 +69,7 @@ env0 --source op:your-vault-name --print
 ## CLI Options
 
 - `-s, --source <platform:vault>`: Specify the source in format platform:vault (e.g. op:secrets-staging)
-- `-f, --file <path>`: Path to an env0 file (defaults to `.env0` unless `-e` is used)
+- `-f, --file <path>`: Path to an env0 file (can be specified multiple times; defaults to `.env0` unless `-e` is used)
 - `-e, --entry <entries...>`: Specify environment variable entries inline
 - `-p, --print`: Print environment variables for shell export
 - Any additional arguments are passed to the command being executed
@@ -74,16 +77,18 @@ env0 --source op:your-vault-name --print
 ## How It Works
 
 1. The CLI loads environment variables using either:
-   - The env0 file specified by `-f, --file`, or
+   - The env0 file(s) specified by `-f, --file`, or
    - Inline entries specified via `-e, --entry`, or
    - Both sources when both `-f` and `-e` are both explicitly specified
-2. If a `.env0.local` file exists in the same directory as the env0 file, it will be loaded and its values will override or extend the base configuration
-3. For each entry, it processes the environment variable based on its type:
+2. When multiple `-f` files are specified, they are processed in order. 
+3. If a `.env0.local` file exists in the same directory as the env0 file, it will be loaded and its values will override or extend the base configuration. 
+4. Where there are multiple files declared, each file's `.local` override is applied immediately after (e.g., `-f a -f b` loads: `a` → `a.local` → `b` → `b.local`).
+5. For each entry, it processes the environment variable based on its type:
    - Shorthand (e.g., `VAR`): Fetches the corresponding item from the specified 1Password vault
    - Literal (e.g., `VAR="value"`): Uses the literal string value provided
    - Reference (e.g., `VAR=SOURCE_VAR`): Fetches the value from another 1Password item
-4. Environment variables are loaded into the process
-5. The specified command is executed with the loaded environment variables
+6. Environment variables are loaded into the process
+7. The specified command is executed with the loaded environment variables
 
 ## Examples
 
@@ -103,6 +108,9 @@ STAGE="dev" env0 -s op:dev -e DB_PASS=PROD_DB_PASS -- node app.js
 
 # Combine env0 file with additional entries
 env0 -s op:dev -f .env0 -e EXTRA_VAR1 -e EXTRA_VAR2 -- node app.js
+
+# Load from multiple env0 files (base config + environment-specific overrides)
+env0 -s op:dev -f .env0 -f .env0.staging -- node app.js
 
 # Export variables to your shell and run a command
 eval $(env0 -s op:dev -p) && node app.js
