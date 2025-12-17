@@ -19,7 +19,7 @@ bun pm version "$TYPE"
 
 VERSION=$(bun -e "console.log(require('./package.json').version)")
 
-git add package/package.json
+git add package.json
 git commit -m "Release v$VERSION"
 git tag "v$VERSION"
 
