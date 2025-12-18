@@ -15,12 +15,15 @@ if [[ "$BRANCH" != "main" ]]; then
 fi
 
 cd package
-bun pm version "$TYPE"
 
-VERSION=$(bun -e "console.log(require('./package.json').version)")
+CURRENT_VERSION=$(bun -e "console.log(require('./package.json').version)")
 
-git add package.json
-git commit -m "Release v$VERSION"
-git tag "v$VERSION"
+if [[ "$TYPE" != "$CURRENT_VERSION" ]]; then
+  bun pm version "$TYPE"
+  VERSION=$(bun -e "console.log(require('./package.json').version)")
+  git add package.json
+  git commit -m "Release v$VERSION"
+  git tag "v$VERSION"
+fi
 
 npm publish
