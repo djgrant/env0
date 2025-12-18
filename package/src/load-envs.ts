@@ -19,7 +19,12 @@ export class EnvLoader {
 
   private parseItemSection(line: string): string | null {
     const match = line.match(/^\[item:([^\]]+)\]$/);
-    return match ? match[1] : null;
+    if (!match) return null;
+    const itemName = match[1].trim();
+    if (!itemName) {
+      throw new Error("Invalid section: item name cannot be empty");
+    }
+    return itemName;
   }
 
   private parseEnvExpression(
