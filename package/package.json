@@ -6,6 +6,7 @@
   "description": "Load environment variables from 1Password",
   "license": "MIT",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "env0": "./dist/cli.js"
   },
@@ -14,7 +15,7 @@
     "url": "git+https://github.com/djgrant/env0.git"
   },
   "scripts": {
-    "build": "bun build src/cli.ts src/index.ts --outdir dist --target node",
+    "build": "bun build src/cli.ts src/index.ts --outdir dist --target node && tsc --emitDeclarationOnly",
     "prepare": "npm run build",
     "prepublishOnly": "cp ../README.md ./README.md && cp -r ../.github ./",
     "postpublish": "rm ./README.md && rm -rf ./.github"
