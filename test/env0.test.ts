@@ -25,6 +25,8 @@ const cleanUp = async () => {
   await rm(".env0.precedence1.local");
   await rm(".env0.precedence2");
   await rm(".env0.precedence2.local");
+  await rm(".env0.section1");
+  await rm(".env0.section2");
 };
 
 beforeAll(async () => {
@@ -310,4 +312,29 @@ test("throws error for missing field in section", async () => {
   );
 
   await expect(runEnv0("--print")).rejects.toThrow();
+});
+
+test("section context resets between files", async () => {
+  // First file ends in a section context
+  await fs.writeFile(
+    ".env0.section1",
+    dedent`
+      [item:supabase]
+      SUPABASE_SECRET_KEY
+    `
+  );
+  // Second file should start fresh (no section context)
+  // TEST_SECRET is a top-level item, not a field in supabase
+  await fs.writeFile(
+    ".env0.section2",
+    dedent`
+      TEST_SECRET
+    `
+  );
+
+  const output = await runEnv0("-f .env0.section1 -f .env0.section2 --print");
+  expect(output).toBe(dedent`
+    export SUPABASE_SECRET_KEY="secret-123"
+    export TEST_SECRET="test-value"
+  `);
 });

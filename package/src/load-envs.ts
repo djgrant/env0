@@ -78,21 +78,6 @@ export class EnvLoader {
     }
   }
 
-  private readEnvFiles() {
-    const allLines: string[] = [];
-
-    for (const configPath of this.configPaths) {
-      const baseLines = EnvLoader.readFileContents(configPath);
-      const overrideLines = EnvLoader.readFileContents(
-        `${configPath}.local`,
-        false
-      );
-      allLines.push(...baseLines, ...overrideLines);
-    }
-
-    return allLines;
-  }
-
   private parseLines(lines: string[]): Record<string, ExpressionNode> {
     const expressionNodes: Record<string, ExpressionNode> = {};
     let currentItemContext: string | undefined;
@@ -113,12 +98,31 @@ export class EnvLoader {
     return expressionNodes;
   }
 
+  private readAndParseEnvFiles(): Record<string, ExpressionNode> {
+    const expressionNodes: Record<string, ExpressionNode> = {};
+
+    for (const configPath of this.configPaths) {
+      // Parse each file separately so section context resets between files
+      const baseLines = EnvLoader.readFileContents(configPath);
+      const baseParsed = this.parseLines(baseLines);
+      Object.assign(expressionNodes, baseParsed);
+
+      const overrideLines = EnvLoader.readFileContents(
+        `${configPath}.local`,
+        false
+      );
+      const overrideParsed = this.parseLines(overrideLines);
+      Object.assign(expressionNodes, overrideParsed);
+    }
+
+    return expressionNodes;
+  }
+
   async loadEnvs(items: string[], readConfig: boolean = true) {
     const expressionNodes: Record<string, ExpressionNode> = {};
 
     if (readConfig) {
-      const configLines = this.readEnvFiles();
-      const parsed = this.parseLines(configLines);
+      const parsed = this.readAndParseEnvFiles();
       Object.assign(expressionNodes, parsed);
     }
 
