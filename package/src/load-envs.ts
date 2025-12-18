@@ -207,7 +207,20 @@ export class EnvLoader {
       }
     };
 
-    const results = await Promise.all(secrets.map(resolveSecret));
+    // Resolve first secret synchronously to trigger biometric auth,
+    // then resolve remaining secrets in parallel
+    const [firstSecret, ...remainingSecrets] = secrets;
+
+    if (firstSecret) {
+      const firstResult = await resolveSecret(firstSecret);
+      if ("error" in firstResult) {
+        errors.push(firstResult.error);
+      } else {
+        resolvedValues[firstResult.key] = firstResult.value;
+      }
+    }
+
+    const results = await Promise.all(remainingSecrets.map(resolveSecret));
 
     for (const result of results) {
       if ("error" in result) {
