@@ -139,54 +139,94 @@ export class EnvLoader {
       }
     }
 
-    const envs: Record<string, string> = {};
+    const errors: string[] = [];
+    const resolvedValues: Record<string, string> = {};
+
+    // Separate literals (no async needed) from secrets (need async resolution)
+    const secrets: ExpressionNode[] = [];
 
     for (const expr of Object.values(expressionNodes)) {
       if (expr.type === "literal") {
-        envs[expr.key] = expr.value!;
-        continue;
+        resolvedValues[expr.key] = expr.value!;
+      } else {
+        secrets.push(expr);
       }
+    }
 
-      // If we have an item context, resolve field from that item
-      if (expr.itemContext) {
+    // Resolve all secrets in parallel
+    const resolveSecret = async (
+      expr: ExpressionNode
+    ): Promise<{ key: string; value: string } | { key: string; error: string }> => {
+      try {
+        // If we have an item context, resolve field from that item
+        if (expr.itemContext) {
+          if (expr.type === "reference") {
+            // VAR=FIELD_NAME inside [item:X] → look up field FIELD_NAME in item X
+            const field = await this.vault.getField(expr.itemContext, expr.value!);
+            if (!field) {
+              return {
+                key: expr.key,
+                error: `No field "${expr.value}" found in item "${expr.itemContext}"`,
+              };
+            }
+            return { key: expr.key, value: field.value };
+          } else {
+            // Shorthand inside [item:X] → look up field with same name as env var
+            const field = await this.vault.getField(expr.itemContext, expr.key);
+            if (!field) {
+              return {
+                key: expr.key,
+                error: `No field "${expr.key}" found in item "${expr.itemContext}"`,
+              };
+            }
+            return { key: expr.key, value: field.value };
+          }
+        }
+
+        // No item context - use original behavior (item title lookup)
         if (expr.type === "reference") {
-          // VAR=FIELD_NAME inside [item:X] → look up field FIELD_NAME in item X
-          const field = this.vault.getField(expr.itemContext, expr.value!);
-          if (!field) {
-            throw new Error(
-              `No field "${expr.value}" found in item "${expr.itemContext}"`
-            );
+          const sourceItem = await this.vault.getItem(expr.value!);
+          if (!sourceItem) {
+            return {
+              key: expr.key,
+              error: `No item found for reference ${expr.value}`,
+            };
           }
-          envs[expr.key] = field.value;
-        } else {
-          // Shorthand inside [item:X] → look up field with same name as env var
-          const field = this.vault.getField(expr.itemContext, expr.key);
-          if (!field) {
-            throw new Error(
-              `No field "${expr.key}" found in item "${expr.itemContext}"`
-            );
-          }
-          envs[expr.key] = field.value;
+          return { key: expr.key, value: sourceItem.value };
         }
-        continue;
-      }
 
-      // No item context - use original behavior (item title lookup)
-      if (expr.type === "reference") {
-        const sourceItem = this.vault.getItem(expr.value!);
-        if (!sourceItem) {
-          throw new Error(`No item found for reference ${expr.value}`);
+        // Shorthand type without context
+        const item = await this.vault.getItem(expr.key);
+        if (!item) {
+          return { key: expr.key, error: `No item found for ${expr.key}` };
         }
-        envs[expr.key] = sourceItem.value;
-        continue;
+        return { key: expr.key, value: item.value };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { key: expr.key, error: message };
       }
+    };
 
-      // Shorthand type without context
-      const item = this.vault.getItem(expr.key);
-      if (!item) {
-        throw new Error(`No item found for ${expr.key}`);
+    const results = await Promise.all(secrets.map(resolveSecret));
+
+    for (const result of results) {
+      if ("error" in result) {
+        errors.push(result.error);
+      } else {
+        resolvedValues[result.key] = result.value;
       }
-      envs[expr.key] = item.value;
+    }
+
+    if (errors.length > 0) {
+      throw new Error(
+        `Failed to load ${errors.length} secret(s):\n- ${errors.join("\n- ")}`
+      );
+    }
+
+    // Build final envs object in alphabetical order
+    const envs: Record<string, string> = {};
+    for (const key of Object.keys(resolvedValues).sort()) {
+      envs[key] = resolvedValues[key];
     }
 
     return envs;

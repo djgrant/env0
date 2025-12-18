@@ -1,5 +1,8 @@
-import { execSync } from "child_process";
+import { exec } from "child_process";
+import { promisify } from "util";
 import { OnePasswordItem } from "./types";
+
+const execAsync = promisify(exec);
 
 export class OnePasswordVault {
   private vaultName: string;
@@ -8,10 +11,10 @@ export class OnePasswordVault {
     this.vaultName = vaultName;
   }
 
-  getItem(key: string) {
+  async getItem(key: string) {
     const cmd = `op item get "${key}" --vault ${this.vaultName} --format json`;
-    const itemJson: string = execSync(cmd, { encoding: "utf-8" }).trim();
-    const item = JSON.parse(itemJson) as OnePasswordItem;
+    const { stdout } = await execAsync(cmd);
+    const item = JSON.parse(stdout.trim()) as OnePasswordItem;
 
     const firstField = item.fields.find((f) => f.purpose !== "NOTES");
 
@@ -25,10 +28,10 @@ export class OnePasswordVault {
     };
   }
 
-  getField(itemTitle: string, fieldLabel: string) {
+  async getField(itemTitle: string, fieldLabel: string) {
     const cmd = `op item get "${itemTitle}" --vault ${this.vaultName} --format json`;
-    const itemJson: string = execSync(cmd, { encoding: "utf-8" }).trim();
-    const item = JSON.parse(itemJson) as OnePasswordItem;
+    const { stdout } = await execAsync(cmd);
+    const item = JSON.parse(stdout.trim()) as OnePasswordItem;
 
     const field = item.fields.find((f) => f.label === fieldLabel);
 

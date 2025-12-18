@@ -81,7 +81,7 @@ test("combines file and inline expressions", async () => {
   await fs.writeFile(".env0", "TEST_SECRET");
   const output = await runEnv0("-f .env0 -e ANOTHER_TEST_SECRET --print");
   expect(output).toBe(
-    'export TEST_SECRET="test-value"\nexport ANOTHER_TEST_SECRET="another-test-value"'
+    'export ANOTHER_TEST_SECRET="another-test-value"\nexport TEST_SECRET="test-value"'
   );
 });
 
@@ -108,9 +108,9 @@ test("supports mixed assignment types", async () => {
   );
   const output = await runEnv0("--print");
   expect(output).toBe(dedent`
-    export TEST_SECRET="test-value"
     export LITERAL_VAR="hello world"
     export RENAMED_SECRET="another-test-value"
+    export TEST_SECRET="test-value"
   `);
 });
 
@@ -125,8 +125,8 @@ test("overrides environment variables with .env0.local file", async () => {
   await fs.writeFile(".env0.local", 'TEST_SECRET="local-override"');
   const output = await runEnv0("--print");
   expect(output).toBe(dedent`
-    export TEST_SECRET="local-override"
     export ANOTHER_TEST_SECRET="another-test-value"
+    export TEST_SECRET="local-override"
   `);
 });
 
@@ -135,7 +135,7 @@ test("adds new variables from .env0.local file", async () => {
   await fs.writeFile(".env0.local", 'LOCAL_VAR="local-only"');
   const output = await runEnv0("--print");
   expect(output).toBe(
-    'export TEST_SECRET="test-value"\nexport LOCAL_VAR="local-only"'
+    'export LOCAL_VAR="local-only"\nexport TEST_SECRET="test-value"'
   );
 });
 
@@ -174,7 +174,7 @@ test("loads environment variables from multiple -f files", async () => {
   await fs.writeFile(".env0.multi2", "ANOTHER_TEST_SECRET");
   const output = await runEnv0("-f .env0.multi1 -f .env0.multi2 --print");
   expect(output).toBe(
-    'export TEST_SECRET="test-value"\nexport ANOTHER_TEST_SECRET="another-test-value"'
+    'export ANOTHER_TEST_SECRET="another-test-value"\nexport TEST_SECRET="test-value"'
   );
 });
 
@@ -191,7 +191,7 @@ test("each -f file supports its own .local override", async () => {
   await fs.writeFile(".env0.localtest2", "ANOTHER_TEST_SECRET");
   const output = await runEnv0("-f .env0.localtest1 -f .env0.localtest2 --print");
   expect(output).toBe(
-    'export TEST_SECRET="base-local-value"\nexport ANOTHER_TEST_SECRET="another-test-value"'
+    'export ANOTHER_TEST_SECRET="another-test-value"\nexport TEST_SECRET="base-local-value"'
   );
 });
 
@@ -260,8 +260,8 @@ test("supports literal values inside section", async () => {
 
   const output = await runEnv0("--print");
   expect(output).toBe(dedent`
-    export SUPABASE_SECRET_KEY="secret-123"
     export MODE="production"
+    export SUPABASE_SECRET_KEY="secret-123"
   `);
 });
 
@@ -279,8 +279,8 @@ test("supports multiple sections", async () => {
 
   const output = await runEnv0("--print");
   expect(output).toBe(dedent`
-    export SUPABASE_SECRET_KEY="secret-123"
     export STRIPE_KEY="sk_test_123"
+    export SUPABASE_SECRET_KEY="secret-123"
   `);
 });
 
@@ -297,8 +297,8 @@ test("supports mixing top-level and section syntax", async () => {
 
   const output = await runEnv0("--print");
   expect(output).toBe(dedent`
-    export TEST_SECRET="test-value"
     export SUPABASE_SECRET_KEY="secret-123"
+    export TEST_SECRET="test-value"
   `);
 });
 
