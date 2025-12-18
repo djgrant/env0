@@ -13,5 +13,6 @@
     "dedent": "^1.7.1",
     "vitest": "^3.0.7",
     "env0": "workspace:*"
-  }
+  },
+  "version": "0.0.1"
 }
