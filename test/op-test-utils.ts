@@ -34,6 +34,22 @@ export class OnePasswordVault {
     }
   }
 
+  async createItemWithFields(opts: {
+    title: string;
+    fields: { label: string; value: string }[];
+  }) {
+    try {
+      const fieldArgs = opts.fields
+        .map((f) => `"${f.label}=${f.value}"`)
+        .join(" ");
+      await run(
+        `op item create --vault ${this.id} --category 003 --title "${opts.title}" ${fieldArgs}`
+      );
+    } catch (error) {
+      console.error(error.stderr.toString());
+    }
+  }
+
   async remove() {
     await run(`op vault delete ${this.id}`);
   }

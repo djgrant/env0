@@ -5,6 +5,7 @@ type ExpressionNode = {
   key: string;
   type: "shorthand" | "literal" | "reference";
   value?: string;
+  itemContext?: string; // The 1Password item title when inside a [item:NAME] section
 };
 
 export class EnvLoader {
@@ -16,10 +17,19 @@ export class EnvLoader {
     this.configPaths = configPaths;
   }
 
-  private parseEnvExpression(line: string): {
+  private parseItemSection(line: string): string | null {
+    const match = line.match(/^\[item:([^\]]+)\]$/);
+    return match ? match[1] : null;
+  }
+
+  private parseEnvExpression(
+    line: string,
+    itemContext?: string
+  ): {
     key: string;
     type: "shorthand" | "literal" | "reference";
     value?: string;
+    itemContext?: string;
   } {
     // Literal assignment (e.g., VAR="value" or VAR='value')
     const literalMatch = line.match(
@@ -38,12 +48,13 @@ export class EnvLoader {
         key: referenceMatch[1],
         type: "reference",
         value: referenceMatch[2],
+        itemContext,
       };
     }
 
     // Shorthand assignment (e.g., VAR)
     if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(line)) {
-      return { key: line, type: "shorthand" };
+      return { key: line, type: "shorthand", itemContext };
     }
 
     throw new Error(`Invalid environment variable expression: ${line}`);
@@ -82,18 +93,37 @@ export class EnvLoader {
     return allLines;
   }
 
+  private parseLines(lines: string[]): Record<string, ExpressionNode> {
+    const expressionNodes: Record<string, ExpressionNode> = {};
+    let currentItemContext: string | undefined;
+
+    for (const line of lines) {
+      // Check for section header
+      const sectionItem = this.parseItemSection(line);
+      if (sectionItem !== null) {
+        currentItemContext = sectionItem;
+        continue;
+      }
+
+      // Parse the expression with current context
+      const env = this.parseEnvExpression(line, currentItemContext);
+      expressionNodes[env.key] = env;
+    }
+
+    return expressionNodes;
+  }
+
   async loadEnvs(items: string[], readConfig: boolean = true) {
     const expressionNodes: Record<string, ExpressionNode> = {};
 
     if (readConfig) {
-      const configExpressions = this.readEnvFiles();
-      for (const exp of configExpressions) {
-        const env = this.parseEnvExpression(exp);
-        expressionNodes[env.key] = env;
-      }
+      const configLines = this.readEnvFiles();
+      const parsed = this.parseLines(configLines);
+      Object.assign(expressionNodes, parsed);
     }
 
     if (items && items.length > 0) {
+      // CLI items don't support section syntax, parse without context
       for (const item of items) {
         const env = this.parseEnvExpression(item);
         expressionNodes[env.key] = env;
@@ -108,6 +138,31 @@ export class EnvLoader {
         continue;
       }
 
+      // If we have an item context, resolve field from that item
+      if (expr.itemContext) {
+        if (expr.type === "reference") {
+          // VAR=FIELD_NAME inside [item:X] → look up field FIELD_NAME in item X
+          const field = this.vault.getField(expr.itemContext, expr.value!);
+          if (!field) {
+            throw new Error(
+              `No field "${expr.value}" found in item "${expr.itemContext}"`
+            );
+          }
+          envs[expr.key] = field.value;
+        } else {
+          // Shorthand inside [item:X] → look up field with same name as env var
+          const field = this.vault.getField(expr.itemContext, expr.key);
+          if (!field) {
+            throw new Error(
+              `No field "${expr.key}" found in item "${expr.itemContext}"`
+            );
+          }
+          envs[expr.key] = field.value;
+        }
+        continue;
+      }
+
+      // No item context - use original behavior (item title lookup)
       if (expr.type === "reference") {
         const sourceItem = this.vault.getItem(expr.value!);
         if (!sourceItem) {
@@ -117,7 +172,7 @@ export class EnvLoader {
         continue;
       }
 
-      // Shorthand type
+      // Shorthand type without context
       const item = this.vault.getItem(expr.key);
       if (!item) {
         throw new Error(`No item found for ${expr.key}`);

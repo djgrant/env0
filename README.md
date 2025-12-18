@@ -33,6 +33,12 @@ LITERAL_VAR="my static value"
 
 # Reference assignment - loads SOURCE_VAR from 1Password
 RENAMED_VAR=SOURCE_VAR
+
+# Section syntax - load multiple fields from a single 1Password item
+[item:supabase]
+SUPABASE_SECRET_KEY
+SUPABASE_URL
+SUPABASE_KEY=SUPABASE_ANON_KEY
 ```
 
 You can also create a `.env0.local` file for local development overrides. This file should not be committed to version control:
@@ -87,6 +93,7 @@ env0 --source op:your-vault-name --print
    - Shorthand (e.g., `VAR`): Fetches the corresponding item from the specified 1Password vault
    - Literal (e.g., `VAR="value"`): Uses the literal string value provided
    - Reference (e.g., `VAR=SOURCE_VAR`): Fetches the value from another 1Password item
+   - Section (e.g., `[item:name]`): Sets the context for subsequent entries to fetch fields from a specific 1Password item by title
 6. Environment variables are loaded into the process
 7. The specified command is executed with the loaded environment variables
 

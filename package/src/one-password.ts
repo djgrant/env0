@@ -24,4 +24,21 @@ export class OnePasswordVault {
       value: firstField.value,
     };
   }
+
+  getField(itemTitle: string, fieldLabel: string) {
+    const cmd = `op item get "${itemTitle}" --vault ${this.vaultName} --format json`;
+    const itemJson: string = execSync(cmd, { encoding: "utf-8" }).trim();
+    const item = JSON.parse(itemJson) as OnePasswordItem;
+
+    const field = item.fields.find((f) => f.label === fieldLabel);
+
+    if (!field) {
+      return null;
+    }
+
+    return {
+      type: field.type,
+      value: field.value,
+    };
+  }
 }

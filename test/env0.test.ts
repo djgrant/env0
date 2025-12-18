@@ -2,6 +2,7 @@ import { expect, test, beforeAll, afterAll, afterEach } from "vitest";
 import { OnePassword } from "./op-test-utils";
 import { run, rm } from "./sh-test-utils";
 import { promises as fs } from "fs";
+import dedent from "dedent";
 
 const op = new OnePassword();
 const testVault = await op.createVault("env-zero-test-vault");
@@ -39,7 +40,21 @@ beforeAll(async () => {
     key: "ANOTHER_TEST_SECRET",
     value: "another-test-value",
   });
-});
+
+  // Items with multiple fields for section syntax tests
+  await testVault.createItemWithFields({
+    title: "supabase",
+    fields: [
+      { label: "SUPABASE_SECRET_KEY", value: "secret-123" },
+      { label: "SUPABASE_URL", value: "https://example.supabase.co" },
+    ],
+  });
+
+  await testVault.createItemWithFields({
+    title: "stripe",
+    fields: [{ label: "STRIPE_KEY", value: "sk_test_123" }],
+  });
+}, 30000);
 
 afterAll(async () => {
   await testVault.remove();
@@ -83,27 +98,34 @@ test("supports reference assignments", async () => {
 test("supports mixed assignment types", async () => {
   await fs.writeFile(
     ".env0",
-    `TEST_SECRET
-LITERAL_VAR="hello world"
-RENAMED_SECRET=ANOTHER_TEST_SECRET`
+    dedent`
+      TEST_SECRET
+      LITERAL_VAR="hello world"
+      RENAMED_SECRET=ANOTHER_TEST_SECRET
+    `
   );
   const output = await runEnv0("--print");
-  expect(output).toBe(
-    'export TEST_SECRET="test-value"\nexport LITERAL_VAR="hello world"\nexport RENAMED_SECRET="another-test-value"'
-  );
+  expect(output).toBe(dedent`
+    export TEST_SECRET="test-value"
+    export LITERAL_VAR="hello world"
+    export RENAMED_SECRET="another-test-value"
+  `);
 });
 
 test("overrides environment variables with .env0.local file", async () => {
   await fs.writeFile(
     ".env0",
-    `TEST_SECRET
-ANOTHER_TEST_SECRET`
+    dedent`
+      TEST_SECRET
+      ANOTHER_TEST_SECRET
+    `
   );
   await fs.writeFile(".env0.local", 'TEST_SECRET="local-override"');
   const output = await runEnv0("--print");
-  expect(output).toBe(
-    'export TEST_SECRET="local-override"\nexport ANOTHER_TEST_SECRET="another-test-value"'
-  );
+  expect(output).toBe(dedent`
+    export TEST_SECRET="local-override"
+    export ANOTHER_TEST_SECRET="another-test-value"
+  `);
 });
 
 test("adds new variables from .env0.local file", async () => {
@@ -178,4 +200,114 @@ test("later -f file's .local override takes precedence", async () => {
   await fs.writeFile(".env0.precedence2.local", 'TEST_SECRET="extra-local-value"');
   const output = await runEnv0("-f .env0.precedence1 -f .env0.precedence2 --print");
   expect(output).toBe('export TEST_SECRET="extra-local-value"');
+});
+
+// Section syntax tests
+test("loads field from item using section syntax (shorthand)", async () => {
+  await fs.writeFile(
+    ".env0",
+    dedent`
+      [item:supabase]
+      SUPABASE_SECRET_KEY
+    `
+  );
+
+  const output = await runEnv0("--print");
+  expect(output).toBe('export SUPABASE_SECRET_KEY="secret-123"');
+});
+
+test("loads multiple fields from item using section syntax", async () => {
+  await fs.writeFile(
+    ".env0",
+    dedent`
+      [item:supabase]
+      SUPABASE_SECRET_KEY
+      SUPABASE_URL
+    `
+  );
+
+  const output = await runEnv0("--print");
+  expect(output).toBe(dedent`
+    export SUPABASE_SECRET_KEY="secret-123"
+    export SUPABASE_URL="https://example.supabase.co"
+  `);
+});
+
+test("loads field with reference syntax inside section", async () => {
+  await fs.writeFile(
+    ".env0",
+    dedent`
+      [item:supabase]
+      MY_SECRET=SUPABASE_SECRET_KEY
+    `
+  );
+
+  const output = await runEnv0("--print");
+  expect(output).toBe('export MY_SECRET="secret-123"');
+});
+
+test("supports literal values inside section", async () => {
+  await fs.writeFile(
+    ".env0",
+    dedent`
+      [item:supabase]
+      SUPABASE_SECRET_KEY
+      MODE="production"
+    `
+  );
+
+  const output = await runEnv0("--print");
+  expect(output).toBe(dedent`
+    export SUPABASE_SECRET_KEY="secret-123"
+    export MODE="production"
+  `);
+});
+
+test("supports multiple sections", async () => {
+  await fs.writeFile(
+    ".env0",
+    dedent`
+      [item:supabase]
+      SUPABASE_SECRET_KEY
+
+      [item:stripe]
+      STRIPE_KEY
+    `
+  );
+
+  const output = await runEnv0("--print");
+  expect(output).toBe(dedent`
+    export SUPABASE_SECRET_KEY="secret-123"
+    export STRIPE_KEY="sk_test_123"
+  `);
+});
+
+test("supports mixing top-level and section syntax", async () => {
+  await fs.writeFile(
+    ".env0",
+    dedent`
+      TEST_SECRET
+
+      [item:supabase]
+      SUPABASE_SECRET_KEY
+    `
+  );
+
+  const output = await runEnv0("--print");
+  expect(output).toBe(dedent`
+    export TEST_SECRET="test-value"
+    export SUPABASE_SECRET_KEY="secret-123"
+  `);
+});
+
+test("throws error for missing field in section", async () => {
+  await fs.writeFile(
+    ".env0",
+    dedent`
+      [item:supabase]
+      NON_EXISTENT_FIELD
+    `
+  );
+
+  await expect(runEnv0("--print")).rejects.toThrow();
 });
