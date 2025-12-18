@@ -1,12 +1,6 @@
-import { readFileSync } from "fs";
 import { OnePasswordVault } from "./one-password";
-
-type ExpressionNode = {
-  key: string;
-  type: "shorthand" | "literal" | "reference";
-  value?: string;
-  itemContext?: string; // The 1Password item title when inside a [item:NAME] section
-};
+import { parse, ExpressionNode } from "./parser";
+import { parseFiles } from "./file-resolver";
 
 export class EnvLoader {
   private vault: OnePasswordVault;
@@ -17,125 +11,19 @@ export class EnvLoader {
     this.configPaths = configPaths;
   }
 
-  private parseItemSection(line: string): string | null {
-    const match = line.match(/^\[item:([^\]]+)\]$/);
-    if (!match) return null;
-    const itemName = match[1].trim();
-    if (!itemName) {
-      throw new Error("Invalid section: item name cannot be empty");
-    }
-    return itemName;
-  }
-
-  private parseEnvExpression(
-    line: string,
-    itemContext?: string
-  ): {
-    key: string;
-    type: "shorthand" | "literal" | "reference";
-    value?: string;
-    itemContext?: string;
-  } {
-    // Literal assignment (e.g., VAR="value" or VAR='value')
-    const literalMatch = line.match(
-      /^([a-zA-Z][a-zA-Z0-9_]*)\s*=\s*["'](.+)["']$/
-    );
-    if (literalMatch) {
-      return { key: literalMatch[1], type: "literal", value: literalMatch[2] };
-    }
-
-    // Reference assignment (e.g., VAR=SOURCE_VAR)
-    const referenceMatch = line.match(
-      /^([a-zA-Z][a-zA-Z0-9_]*)\s*=\s*([a-zA-Z][a-zA-Z0-9_]*)$/
-    );
-    if (referenceMatch) {
-      return {
-        key: referenceMatch[1],
-        type: "reference",
-        value: referenceMatch[2],
-        itemContext,
-      };
-    }
-
-    // Shorthand assignment (e.g., VAR)
-    if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(line)) {
-      return { key: line, type: "shorthand", itemContext };
-    }
-
-    throw new Error(`Invalid environment variable expression: ${line}`);
-  }
-
-  private static readFileContents(
-    filePath: string,
-    required: boolean = true
-  ): string[] {
-    try {
-      const content = readFileSync(filePath, "utf-8");
-      return content
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line && !line.startsWith("#"));
-    } catch (error) {
-      if (required && (error as { code?: string }).code === "ENOENT") {
-        throw new Error(`Failed to read file ${filePath}: ${error}`);
-      }
-      return [];
-    }
-  }
-
-  private parseLines(lines: string[]): Record<string, ExpressionNode> {
-    const expressionNodes: Record<string, ExpressionNode> = {};
-    let currentItemContext: string | undefined;
-
-    for (const line of lines) {
-      // Check for section header
-      const sectionItem = this.parseItemSection(line);
-      if (sectionItem !== null) {
-        currentItemContext = sectionItem;
-        continue;
-      }
-
-      // Parse the expression with current context
-      const env = this.parseEnvExpression(line, currentItemContext);
-      expressionNodes[env.key] = env;
-    }
-
-    return expressionNodes;
-  }
-
-  private readAndParseEnvFiles(): Record<string, ExpressionNode> {
-    const expressionNodes: Record<string, ExpressionNode> = {};
-
-    for (const configPath of this.configPaths) {
-      // Parse each file separately so section context resets between files
-      const baseLines = EnvLoader.readFileContents(configPath);
-      const baseParsed = this.parseLines(baseLines);
-      Object.assign(expressionNodes, baseParsed);
-
-      const overrideLines = EnvLoader.readFileContents(
-        `${configPath}.local`,
-        false
-      );
-      const overrideParsed = this.parseLines(overrideLines);
-      Object.assign(expressionNodes, overrideParsed);
-    }
-
-    return expressionNodes;
-  }
-
   async loadEnvs(items: string[], readConfig: boolean = true) {
     const expressionNodes: Record<string, ExpressionNode> = {};
 
     if (readConfig) {
-      const parsed = this.readAndParseEnvFiles();
-      Object.assign(expressionNodes, parsed);
+      const parsed = parseFiles(this.configPaths);
+      Object.assign(expressionNodes, parsed.getExpressions());
     }
 
     if (items && items.length > 0) {
-      // CLI items don't support section syntax, parse without context
+      // Each CLI entry is a single expression (e.g., -e API_KEY -e DB_URL)
       for (const item of items) {
-        const env = this.parseEnvExpression(item);
-        expressionNodes[env.key] = env;
+        const parsed = parse(item);
+        Object.assign(expressionNodes, parsed.getExpressions());
       }
     }
 
@@ -156,13 +44,18 @@ export class EnvLoader {
     // Resolve all secrets in parallel
     const resolveSecret = async (
       expr: ExpressionNode
-    ): Promise<{ key: string; value: string } | { key: string; error: string }> => {
+    ): Promise<
+      { key: string; value: string } | { key: string; error: string }
+    > => {
       try {
         // If we have an item context, resolve field from that item
         if (expr.itemContext) {
           if (expr.type === "reference") {
             // VAR=FIELD_NAME inside [item:X] → look up field FIELD_NAME in item X
-            const field = await this.vault.getField(expr.itemContext, expr.value!);
+            const field = await this.vault.getField(
+              expr.itemContext,
+              expr.value!
+            );
             if (!field) {
               return {
                 key: expr.key,
@@ -236,12 +129,11 @@ export class EnvLoader {
       );
     }
 
-    // Build final envs object in alphabetical order
-    const envs: Record<string, string> = {};
+    // Return envs sorted by key for consistent output
+    const sortedEnvs: Record<string, string> = {};
     for (const key of Object.keys(resolvedValues).sort()) {
-      envs[key] = resolvedValues[key];
+      sortedEnvs[key] = resolvedValues[key];
     }
-
-    return envs;
+    return sortedEnvs;
   }
 }
