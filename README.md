@@ -97,6 +97,47 @@ env0 --source op:your-vault-name --print
 6. Environment variables are loaded into the process
 7. The specified command is executed with the loaded environment variables
 
+## Programmatic API
+
+env0 exports a parser API for programmatically reading and analyzing `.env0` files without resolving secrets from 1Password.
+
+```ts
+import { parse, parseFile, parseFiles } from "env0";
+
+// Parse a string
+const result = parse(`
+  API_KEY
+  DB_URL="localhost"
+  [item:stripe]
+  STRIPE_KEY
+`);
+
+result.getKeys();        // ["API_KEY", "DB_URL", "STRIPE_KEY"]
+result.getExpressions(); // { API_KEY: { key, type, ... }, ... }
+result.has("API_KEY");   // true
+
+// Parse a file
+const result = parseFile(".env0");
+
+// Parse multiple files (later files override earlier ones)
+const result = parseFiles([".env0", ".env0.staging"], {
+  resolveLocalOverrides: true, // also reads .env0.local, .env0.staging.local
+});
+```
+
+### Types
+
+```ts
+type ExpressionType = "shorthand" | "literal" | "reference";
+
+type ExpressionNode = {
+  key: string;
+  type: ExpressionType;
+  value?: string;       // The literal value or reference key
+  itemContext?: string; // The 1Password item name when inside a [item:X] section
+};
+```
+
 ## Examples
 
 ```bash
