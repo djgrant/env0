@@ -99,7 +99,35 @@ env0 --source op:your-vault-name --print
 
 ## Programmatic API
 
-env0 exports a parser API for programmatically reading and analyzing `.env0` files without resolving secrets from 1Password.
+### Reading Secrets
+
+Use the `read` function to load secrets from 1Password programmatically:
+
+```ts
+import { read } from "env0";
+
+// Basic usage - reads from .env0 file by default
+const env = await read({
+  source: "op:my-vault",
+});
+
+// With custom files and inline entries
+const env = await read({
+  source: "op:my-vault",
+  files: [".env0", ".env0.staging"],
+  entries: ["API_KEY", "DB_URL=database_url"],
+});
+
+// Use with any process spawning library
+import { spawn } from "child_process";
+spawn("npm", ["run", "dev"], {
+  env: { ...process.env, ...env },
+});
+```
+
+### Parsing
+
+An API is also provided for parsing `.env0` files without resolving secrets.
 
 ```ts
 import { parse, parseFile, parseFiles } from "env0";
@@ -128,6 +156,12 @@ const result = parseFiles([".env0", ".env0.staging"], {
 ### Types
 
 ```ts
+type ReadOptions = {
+  source: string;      // Required: "op:vault-name"
+  files?: string[];    // Default: [".env0"]
+  entries?: string[];  // Additional inline entries
+};
+
 type ExpressionType = "shorthand" | "literal" | "reference";
 
 type ExpressionNode = {

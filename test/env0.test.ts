@@ -1,7 +1,8 @@
-import { expect, test, beforeAll, afterAll, afterEach } from "vitest";
+import { expect, test, beforeAll, afterAll, afterEach, describe } from "vitest";
 import { OnePassword } from "./op-test-utils";
 import { run, rm } from "./sh-test-utils";
 import { promises as fs } from "fs";
+import { read } from "../package/src/index";
 import dedent from "dedent";
 
 const op = new OnePassword();
@@ -337,4 +338,68 @@ test("section context resets between files", async () => {
     export SUPABASE_SECRET_KEY="secret-123"
     export TEST_SECRET="test-value"
   `);
+});
+
+// Programmatic API tests
+describe("read()", () => {
+  test("loads environment variables from .env0 file", async () => {
+    await fs.writeFile(".env0", "TEST_SECRET");
+    const env = await read({ source: "op:env-zero-test-vault" });
+    expect(env).toEqual({ TEST_SECRET: "test-value" });
+  });
+
+  test("loads from custom files", async () => {
+    await fs.writeFile(".env0.multi1", "TEST_SECRET");
+    await fs.writeFile(".env0.multi2", "ANOTHER_TEST_SECRET");
+    const env = await read({
+      source: "op:env-zero-test-vault",
+      files: [".env0.multi1", ".env0.multi2"],
+    });
+    expect(env).toEqual({
+      TEST_SECRET: "test-value",
+      ANOTHER_TEST_SECRET: "another-test-value",
+    });
+  });
+
+  test("loads from entries", async () => {
+    const env = await read({
+      source: "op:env-zero-test-vault",
+      files: [],
+      entries: ["TEST_SECRET"],
+    });
+    expect(env).toEqual({ TEST_SECRET: "test-value" });
+  });
+
+  test("combines files and entries", async () => {
+    await fs.writeFile(".env0", "TEST_SECRET");
+    const env = await read({
+      source: "op:env-zero-test-vault",
+      entries: ["ANOTHER_TEST_SECRET"],
+    });
+    expect(env).toEqual({
+      TEST_SECRET: "test-value",
+      ANOTHER_TEST_SECRET: "another-test-value",
+    });
+  });
+
+  test("supports literal values in entries", async () => {
+    const env = await read({
+      source: "op:env-zero-test-vault",
+      files: [],
+      entries: ['MY_VAR="hello world"'],
+    });
+    expect(env).toEqual({ MY_VAR: "hello world" });
+  });
+
+  test("throws error for invalid source format", async () => {
+    await expect(read({ source: "invalid" })).rejects.toThrow(
+      "source must be in format platform:vault"
+    );
+  });
+
+  test("throws error for unsupported platform", async () => {
+    await expect(read({ source: "aws:my-vault" })).rejects.toThrow(
+      "source platform must be one of: [op]"
+    );
+  });
 });

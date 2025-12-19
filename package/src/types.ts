@@ -1,3 +1,9 @@
+export type ReadOptions = {
+  source: string;
+  files?: string[];
+  entries?: string[];
+};
+
 export type OnePasswordItem = {
   id: string;
   title: string;
